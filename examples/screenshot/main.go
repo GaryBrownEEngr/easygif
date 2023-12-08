@@ -1,26 +1,12 @@
 package main
 
-import "easygif"
+import "github.com/GaryBrownEEngr/easygif"
 
 func main() {
-	img, err := easygif.Screenshot()
-	if err != nil {
-		panic(err)
-	}
-
-	err = easygif.SaveImageToPNG(img, "./examples/screenshot/screenshot.png")
-	if err != nil {
-		panic(err)
-	}
+	img, _ := easygif.Screenshot()
+	_ = easygif.SaveImageToPNG(img, "./examples/screenshot/screenshot.png")
 
 	// trimmed
-	img, err = easygif.ScreenshotTrimmed(200, 200, 200, 600)
-	if err != nil {
-		panic(err)
-	}
-
-	err = easygif.SaveImageToPNG(img, "./examples/screenshot/screenshotTrimmed.png")
-	if err != nil {
-		panic(err)
-	}
+	img, _ = easygif.ScreenshotTrimmed(200, 200, 200, 600)
+	_ = easygif.SaveImageToPNG(img, "./examples/screenshot/screenshotTrimmed.png")
 }

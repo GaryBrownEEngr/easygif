@@ -1,4 +1,4 @@
-module easygif
+module github.com/GaryBrownEEngr/easygif
 
 go 1.21
 
