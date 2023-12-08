@@ -43,11 +43,15 @@ import (
 )
 
 func main() {
-	frames, _ := easygif.ScreenshotVideo(50, time.Millisecond*100)
-	_ = easygif.EasyGifWrite(frames, time.Millisecond*100, "./examples/gif/screenshot.gif")
+	// Collect screenshots of either the entire screen or a trimmed section of it.
+	//frames, _ := easygif.ScreenshotVideo(50, time.Millisecond*100)
+	frames, _ := easygif.ScreenshotVideoTrimmed(50, time.Millisecond*100, 200, 10, 50, 400)
 
-	frames, _ = easygif.ScreenshotVideoTrimmed(50, time.Millisecond*100, 200, 10, 50, 400)
+	// Create a GIF using the Plan9 color palette and nearest color approximation.
 	_ = easygif.EasyGifWrite(frames, time.Millisecond*100, "./examples/gif/screenshotTrimmed.gif")
+
+	// Use dithering for better colors
+	_ = easygif.EasyDitheredGifWrite(frames, time.Millisecond*100, "./examples/gif/screenshotTrimmedDithered.gif")
 }
 
 ```
