@@ -51,3 +51,6 @@ func main() {
 }
 
 ```
+
+![GIF made by golang easygif One does not simply make a gif](https://github.com/GaryBrownEEngr/easygif/blob/main/examples/gif/OneDoesNotSimplyMakeAGIF.gif)
+Screenshots taken from [here](https://www.youtube.com/watch?v=klidgum0_v8).

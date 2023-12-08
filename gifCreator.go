@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/color/palette"
+	"image/draw"
 	"image/gif"
 	"log"
 	"os"
@@ -189,4 +190,119 @@ func gifPalettedImageProcessor(
 	}
 
 	wg.Done()
+}
+
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+
+// uses draw.FloydSteinberg.Draw()
+// Much slower, but is able to approximate colors much better that just a nearest fit match.
+func EasyDitheredGifWrite(
+	frames []image.Image,
+	timeBetweenFrames time.Duration,
+	outputGifFilePath string,
+) error {
+	g := CreateDitheredGif(frames, timeBetweenFrames, palette.Plan9)
+
+	// Write the file
+	f, err := os.OpenFile(outputGifFilePath, os.O_WRONLY|os.O_CREATE, 0o600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	err = gif.EncodeAll(f, g)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// uses draw.FloydSteinberg.Draw()
+// Much slower, but is able to approximate colors much better that just a nearest fit match.
+func CreateDitheredGif(
+	frames []image.Image,
+	timeBetweenFrames time.Duration,
+	colorPalette color.Palette,
+) *gif.GIF {
+	//
+	hundredthOfSecondDelay := int(timeBetweenFrames.Seconds() * 100)
+
+	// Process the images.
+	imagesPal := make([]*image.Paletted, 0, len(frames))
+	delays := make([]int, 0, len(frames))
+
+	wp := NewWorkerPool(10)
+
+	// Fill the request channel with images to convert
+	for frameIndex := range frames {
+		screenShot := frames[frameIndex]
+		bounds := screenShot.Bounds()
+		ssPaletted := image.NewPaletted(bounds, colorPalette)
+		imagesPal = append(imagesPal, ssPaletted)
+		delays = append(delays, hundredthOfSecondDelay)
+
+		wp.AddTask(func() {
+			draw.FloydSteinberg.Draw(ssPaletted, bounds, screenShot, image.Point{})
+		})
+	}
+
+	wp.WaitForCompletion()
+
+	ret := &gif.GIF{
+		Image: imagesPal,
+		Delay: delays,
+	}
+
+	return ret
+}
+
+///////////////////////////////////
+///////////////////////////////////
+
+// Based on https://medium.com/code-chasm/go-concurrency-pattern-worker-pool-a437117025b1
+// WorkerPool is a contract for Worker Pool implementation
+type WorkerPool interface {
+	AddTask(task func())
+	WaitForCompletion()
+}
+
+type workerPool struct {
+	maxWorker   int
+	queuedTaskC chan func()
+	wg          *sync.WaitGroup
+}
+
+var _ WorkerPool = &workerPool{} // make the compiler check this struct implements the interface.
+
+func NewWorkerPool(workerCount int) *workerPool {
+	ret := &workerPool{
+		maxWorker:   workerCount,
+		queuedTaskC: make(chan func(), 100),
+		wg:          &sync.WaitGroup{},
+	}
+
+	ret.wg.Add(ret.maxWorker)
+
+	for i := 0; i < ret.maxWorker; i++ {
+		go func() {
+			for task := range ret.queuedTaskC {
+				task()
+			}
+
+			ret.wg.Done()
+		}()
+	}
+
+	return ret
+}
+
+func (s *workerPool) AddTask(task func()) {
+	s.queuedTaskC <- task
+}
+
+func (s *workerPool) WaitForCompletion() {
+	close(s.queuedTaskC)
+	s.wg.Wait()
 }
