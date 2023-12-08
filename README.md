@@ -10,7 +10,7 @@ Easy creation of GIF images with Golang
 ## Install
 
 ```bash
-go get https://github.com/GaryBrownEEngr/easygif
+go get github.com/GaryBrownEEngr/easygif
 ```
 
 ## Easy Screenshots
