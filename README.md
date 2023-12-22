@@ -48,10 +48,13 @@ func main() {
 	frames, _ := easygif.ScreenshotVideoTrimmed(50, time.Millisecond*100, 200, 10, 50, 400)
 
 	// Create a GIF using the Plan9 color palette and nearest color approximation.
-	_ = easygif.EasyGifWrite(frames, time.Millisecond*100, "./examples/gif/screenshotTrimmed.gif")
+	easygif.EasyGifWrite(frames, time.Millisecond*100, "easy.gif")
 
 	// Use dithering for better colors
-	_ = easygif.EasyDitheredGifWrite(frames, time.Millisecond*100, "./examples/gif/screenshotTrimmedDithered.gif")
+	easygif.EasyDitheredGifWrite(frames, time.Millisecond*100, "easyDithered.gif")
+
+	// Use the 256 most common colors for a diagram or cartoon
+	easygif.MostCommonColorsGifWrite(frames, time.Millisecond*100, "mostCommonColors.gif")
 }
 
 ```

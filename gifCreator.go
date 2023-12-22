@@ -8,15 +8,16 @@ import (
 	"image/gif"
 	"log"
 	"os"
+	"sort"
 	"sync"
 	"time"
 )
 
 func EasyGif(
-	images []image.Image,
+	frames []image.Image,
 	timeBetweenFrames time.Duration,
 ) *gif.GIF {
-	g := CreateGif(images, timeBetweenFrames, palette.Plan9)
+	g := CreateGif(frames, timeBetweenFrames, palette.Plan9)
 	return g
 }
 
@@ -25,10 +26,15 @@ func EasyGifWrite(
 	timeBetweenFrames time.Duration,
 	outputGifFilePath string,
 ) error {
-	g := CreateGif(frames, timeBetweenFrames, palette.Plan9)
+	g := EasyGif(frames, timeBetweenFrames)
 
 	// Write the file
-	f, err := os.OpenFile(outputGifFilePath, os.O_WRONLY|os.O_CREATE, 0o600)
+	return writeGif(g, outputGifFilePath)
+}
+
+func writeGif(g *gif.GIF, filePath string) error {
+	// Write the file
+	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0o600)
 	if err != nil {
 		return err
 	}
@@ -41,6 +47,75 @@ func EasyGifWrite(
 	return nil
 }
 
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+
+func MostCommonColorsGif(
+	frames []image.Image,
+	timeBetweenFrames time.Duration,
+) *gif.GIF {
+	mostCommonColors := FindMostCommonColors(frames)
+
+	g := CreateGif(frames, timeBetweenFrames, mostCommonColors)
+	return g
+}
+
+func MostCommonColorsGifWrite(
+	frames []image.Image,
+	timeBetweenFrames time.Duration,
+	outputGifFilePath string,
+) error {
+	g := MostCommonColorsGif(frames, timeBetweenFrames)
+
+	// Write the file
+	return writeGif(g, outputGifFilePath)
+}
+
+func FindMostCommonColors(frames []image.Image) []color.Color {
+	colorCount := make(map[color.Color]int, 10000)
+
+	for _, img := range frames {
+		bounds := img.Bounds()
+		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+			for x := bounds.Min.X; x < bounds.Max.X; x++ {
+				c := img.At(x, y)
+				count := colorCount[c]
+				count++
+				colorCount[c] = count
+			}
+		}
+	}
+
+	type colorSort struct {
+		c     color.Color
+		count int
+	}
+	foundColors := make([]colorSort, 0, len(colorCount))
+	for i, j := range colorCount {
+		foundColors = append(foundColors, colorSort{c: i, count: j})
+	}
+	sort.SliceStable(foundColors, func(i, j int) bool {
+		return foundColors[i].count < foundColors[j].count
+	})
+
+	if len(foundColors) > 256 {
+		foundColors = foundColors[:256]
+	}
+
+	ret := make([]color.Color, 0, 256)
+
+	for _, c := range foundColors {
+		ret = append(ret, c.c)
+	}
+	return ret
+}
+
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+
+// Create a GIF with the given palette of colors. If an exact match is not found, use the nearest available color.
 func CreateGif(
 	frames []image.Image,
 	timeBetweenFrames time.Duration,
@@ -206,17 +281,7 @@ func EasyDitheredGifWrite(
 	g := CreateDitheredGif(frames, timeBetweenFrames, palette.Plan9)
 
 	// Write the file
-	f, err := os.OpenFile(outputGifFilePath, os.O_WRONLY|os.O_CREATE, 0o600)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	err = gif.EncodeAll(f, g)
-	if err != nil {
-		return err
-	}
-	return nil
+	return writeGif(g, outputGifFilePath)
 }
 
 // uses draw.FloydSteinberg.Draw()
