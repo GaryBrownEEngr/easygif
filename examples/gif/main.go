@@ -18,7 +18,7 @@ func main() {
 
 	// time.Sleep(time.Second * 3)
 	// fmt.Println("Set?")
-	// time.Sleep(time.Second * 1)
+	time.Sleep(time.Second * 3)
 	fmt.Println("GO!")
 	frames, _ := easygif.ScreenshotVideoTrimmed(30, time.Millisecond*50, 150, 1050, 380, 1270)
 	fmt.Println("Collection Done.")
@@ -28,9 +28,18 @@ func main() {
 	AddMemeText(frames, s1, s2, easygif.Crimson)
 
 	fmt.Println("Encoding GIF.")
+
 	startTime := time.Now()
-	_ = easygif.EasyDitheredGifWrite(frames, time.Millisecond*100, "./examples/gif/OneDoesNotSimplyMakeAGIF.gif")
-	fmt.Println("Took: ", time.Since(startTime), " to encode.")
+	_ = easygif.NearestWrite(frames, time.Millisecond*100, "./examples/gif/OneDoesNotSimplyMakeAGIF_Nearest.gif")
+	fmt.Println("Took: ", time.Since(startTime), " to encode Nearest.")
+
+	startTime = time.Now()
+	_ = easygif.DitheredWrite(frames, time.Millisecond*100, "./examples/gif/OneDoesNotSimplyMakeAGIF_Dithered.gif")
+	fmt.Println("Took: ", time.Since(startTime), " to encode Dithered.")
+
+	startTime = time.Now()
+	_ = easygif.MostCommonColorsWrite(frames, time.Millisecond*100, "./examples/gif/OneDoesNotSimplyMakeAGIF_MostCommon.gif")
+	fmt.Println("Took: ", time.Since(startTime), " to encode MostCommon.")
 }
 
 func AddMemeText(frames []image.Image, s1, s2 string, c color.Color) {

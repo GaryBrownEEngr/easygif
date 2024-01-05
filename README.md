@@ -1,6 +1,6 @@
 # EasyGif
 
-Easy creation of GIF images with Golang
+Easy creation of screenshots and GIFs with Golang.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/GaryBrownEEngr/easygif.svg)](https://pkg.go.dev/github.com/GaryBrownEEngr/easygif)
 [![Go CI](https://github.com/GaryBrownEEngr/easygif/actions/workflows/go.yml/badge.svg)](https://github.com/GaryBrownEEngr/easygif/actions/workflows/go.yml)
@@ -33,6 +33,8 @@ func main() {
 
 ## Easy GIF Creation
 
+This package layers on top of the built-in golang [image/gif](https://pkg.go.dev/image/gif) package. The goal is to remove all the complexity of making a GIF with go. Once you have a slice of images then only a single function call is required to generate and write your GIF.
+
 ```go
 package main
 
@@ -48,17 +50,29 @@ func main() {
 	frames, _ := easygif.ScreenshotVideoTrimmed(50, time.Millisecond*100, 200, 10, 50, 400)
 
 	// Create a GIF using the Plan9 color palette and nearest color approximation.
-	easygif.EasyGifWrite(frames, time.Millisecond*100, "easy.gif")
+	easygif.NearestWrite(frames, time.Millisecond*100, "easy.gif")
 
-	// Use dithering for better colors
-	easygif.EasyDitheredGifWrite(frames, time.Millisecond*100, "easyDithered.gif")
+	// Use dithering for better colors, but adds noise
+	easygif.DitheredWrite(frames, time.Millisecond*100, "easyDithered.gif")
 
-	// Use the 256 most common colors for a diagram or cartoon
-	easygif.MostCommonColorsGifWrite(frames, time.Millisecond*100, "mostCommonColors.gif")
+	// Use the 256 most common colors found in the frames
+	easygif.MostCommonColorsWrite(frames, time.Millisecond*100, "mostCommonColors.gif")
 }
 
 ```
 
-![GIF made by golang easygif One does not simply make a gif](https://github.com/GaryBrownEEngr/easygif/blob/main/examples/gif/OneDoesNotSimplyMakeAGIF.gif)
+### easygif.Nearest
+
+![GIF made by golang easygif - One does not simply make a gif - using nearest Plan9 color](https://github.com/GaryBrownEEngr/easygif/blob/main/examples/gif/OneDoesNotSimplyMakeAGIF_Nearest.gif)
+
+### easygif.Dithered
+
+![GIF made by golang easygif - One does not simply make a gif - using dithering](https://github.com/GaryBrownEEngr/easygif/blob/main/examples/gif/OneDoesNotSimplyMakeAGIF_Dithered.gif)
+
+### easygif.MostCommonColors
+
+![GIF made by golang easygif - One does not simply make a gif - using the 256 most common colors](https://github.com/GaryBrownEEngr/easygif/blob/main/examples/gif/OneDoesNotSimplyMakeAGIF_MostCommon.gif)
 
 Screenshots taken from [here](https://www.youtube.com/watch?v=klidgum0_v8).
+
+I would recommend using `easygif.MostCommonColors`. Happy GIFing.

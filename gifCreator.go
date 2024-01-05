@@ -7,116 +7,57 @@ import (
 	"image/draw"
 	"image/gif"
 	"log"
-	"os"
-	"sort"
 	"sync"
 	"time"
 )
 
-func EasyGif(
-	frames []image.Image,
-	timeBetweenFrames time.Duration,
-) *gif.GIF {
-	g := CreateGif(frames, timeBetweenFrames, palette.Plan9)
-	return g
-}
-
-func EasyGifWrite(
-	frames []image.Image,
-	timeBetweenFrames time.Duration,
-	outputGifFilePath string,
-) error {
-	g := EasyGif(frames, timeBetweenFrames)
-
-	// Write the file
-	return writeGif(g, outputGifFilePath)
-}
-
-func writeGif(g *gif.GIF, filePath string) error {
-	// Write the file
-	f, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0o600)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	err = gif.EncodeAll(f, g)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // //////////////////////////////////////////////
 // //////////////////////////////////////////////
 // //////////////////////////////////////////////
 
-func MostCommonColorsGif(
+func MostCommonColors(
 	frames []image.Image,
 	timeBetweenFrames time.Duration,
 ) *gif.GIF {
 	mostCommonColors := FindMostCommonColors(frames)
 
-	g := CreateGif(frames, timeBetweenFrames, mostCommonColors)
-	return g
+	return NearestOptions(frames, timeBetweenFrames, mostCommonColors)
+	// return CreateDitheredGif(frames, timeBetweenFrames, mostCommonColors)
 }
 
-func MostCommonColorsGifWrite(
+func MostCommonColorsWrite(
 	frames []image.Image,
 	timeBetweenFrames time.Duration,
 	outputGifFilePath string,
 ) error {
-	g := MostCommonColorsGif(frames, timeBetweenFrames)
-
-	// Write the file
+	g := MostCommonColors(frames, timeBetweenFrames)
 	return writeGif(g, outputGifFilePath)
 }
 
-func FindMostCommonColors(frames []image.Image) []color.Color {
-	colorCount := make(map[color.Color]int, 10000)
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
+// //////////////////////////////////////////////
 
-	for _, img := range frames {
-		bounds := img.Bounds()
-		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-			for x := bounds.Min.X; x < bounds.Max.X; x++ {
-				c := img.At(x, y)
-				count := colorCount[c]
-				count++
-				colorCount[c] = count
-			}
-		}
-	}
-
-	type colorSort struct {
-		c     color.Color
-		count int
-	}
-	foundColors := make([]colorSort, 0, len(colorCount))
-	for i, j := range colorCount {
-		foundColors = append(foundColors, colorSort{c: i, count: j})
-	}
-	sort.SliceStable(foundColors, func(i, j int) bool {
-		return foundColors[i].count < foundColors[j].count
-	})
-
-	if len(foundColors) > 256 {
-		foundColors = foundColors[:256]
-	}
-
-	ret := make([]color.Color, 0, 256)
-
-	for _, c := range foundColors {
-		ret = append(ret, c.c)
-	}
-	return ret
+// Create a GIF with the Plan9 palette of colors. If an exact match is not found, use the nearest available color.
+func Nearest(
+	frames []image.Image,
+	timeBetweenFrames time.Duration,
+) *gif.GIF {
+	return NearestOptions(frames, timeBetweenFrames, palette.Plan9)
 }
 
-// //////////////////////////////////////////////
-// //////////////////////////////////////////////
-// //////////////////////////////////////////////
+// Create a GIF with the Plan9 palette of colors. If an exact match is not found, use the nearest available color.
+func NearestWrite(
+	frames []image.Image,
+	timeBetweenFrames time.Duration,
+	outputGifFilePath string,
+) error {
+	g := Nearest(frames, timeBetweenFrames)
+	return writeGif(g, outputGifFilePath)
+}
 
 // Create a GIF with the given palette of colors. If an exact match is not found, use the nearest available color.
-func CreateGif(
+func NearestOptions(
 	frames []image.Image,
 	timeBetweenFrames time.Duration,
 	colorPalette color.Palette,
@@ -271,14 +212,23 @@ func gifPalettedImageProcessor(
 // //////////////////////////////////////////////
 // //////////////////////////////////////////////
 
-// uses draw.FloydSteinberg.Draw()
+// uses draw.FloydSteinberg.Draw() and the Plan9 Palette
 // Much slower, but is able to approximate colors much better that just a nearest fit match.
-func EasyDitheredGifWrite(
+func Dithered(
+	frames []image.Image,
+	timeBetweenFrames time.Duration,
+) *gif.GIF {
+	return DitheredOptions(frames, timeBetweenFrames, palette.Plan9)
+}
+
+// uses draw.FloydSteinberg.Draw() and the Plan9 Palette
+// Much slower, but is able to approximate colors much better that just a nearest fit match.
+func DitheredWrite(
 	frames []image.Image,
 	timeBetweenFrames time.Duration,
 	outputGifFilePath string,
 ) error {
-	g := CreateDitheredGif(frames, timeBetweenFrames, palette.Plan9)
+	g := Dithered(frames, timeBetweenFrames)
 
 	// Write the file
 	return writeGif(g, outputGifFilePath)
@@ -286,7 +236,7 @@ func EasyDitheredGifWrite(
 
 // uses draw.FloydSteinberg.Draw()
 // Much slower, but is able to approximate colors much better that just a nearest fit match.
-func CreateDitheredGif(
+func DitheredOptions(
 	frames []image.Image,
 	timeBetweenFrames time.Duration,
 	colorPalette color.Palette,
@@ -298,7 +248,7 @@ func CreateDitheredGif(
 	imagesPal := make([]*image.Paletted, 0, len(frames))
 	delays := make([]int, 0, len(frames))
 
-	wp := NewWorkerPool(10)
+	wp := newWorkerPool(10)
 
 	// Fill the request channel with images to convert
 	for frameIndex := range frames {
@@ -308,12 +258,12 @@ func CreateDitheredGif(
 		imagesPal = append(imagesPal, ssPaletted)
 		delays = append(delays, hundredthOfSecondDelay)
 
-		wp.AddTask(func() {
+		wp.addTask(func() {
 			draw.FloydSteinberg.Draw(ssPaletted, bounds, screenShot, image.Point{})
 		})
 	}
 
-	wp.WaitForCompletion()
+	wp.waitForCompletion()
 
 	ret := &gif.GIF{
 		Image: imagesPal,
@@ -325,49 +275,3 @@ func CreateDitheredGif(
 
 ///////////////////////////////////
 ///////////////////////////////////
-
-// Based on https://medium.com/code-chasm/go-concurrency-pattern-worker-pool-a437117025b1
-// WorkerPool is a contract for Worker Pool implementation
-type WorkerPool interface {
-	AddTask(task func())
-	WaitForCompletion()
-}
-
-type workerPool struct {
-	maxWorker   int
-	queuedTaskC chan func()
-	wg          *sync.WaitGroup
-}
-
-var _ WorkerPool = &workerPool{} // make the compiler check this struct implements the interface.
-
-func NewWorkerPool(workerCount int) *workerPool {
-	ret := &workerPool{
-		maxWorker:   workerCount,
-		queuedTaskC: make(chan func(), 100),
-		wg:          &sync.WaitGroup{},
-	}
-
-	ret.wg.Add(ret.maxWorker)
-
-	for i := 0; i < ret.maxWorker; i++ {
-		go func() {
-			for task := range ret.queuedTaskC {
-				task()
-			}
-
-			ret.wg.Done()
-		}()
-	}
-
-	return ret
-}
-
-func (s *workerPool) AddTask(task func()) {
-	s.queuedTaskC <- task
-}
-
-func (s *workerPool) WaitForCompletion() {
-	close(s.queuedTaskC)
-	s.wg.Wait()
-}
